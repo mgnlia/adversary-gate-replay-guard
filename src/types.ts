@@ -1,9 +1,9 @@
 /**
- * Minimal type surface extracted from @ai-office/shared to keep this module
- * self-contained and testable without pulling in the full monorepo.
+ * Core types for the adversary-gate-replay-guard module.
  *
- * These mirror the canonical types in packages/shared/src/types.ts and
- * packages/shared/src/enums.ts.
+ * Mirrors the canonical types from @ai-office/shared where applicable,
+ * while keeping this module self-contained and testable without the
+ * full monorepo.
  */
 
 // ── Task statuses (matches TASK_STATUSES enum) ──────────────
@@ -24,11 +24,6 @@ export type TaskStatus = (typeof TASK_STATUSES)[number];
 export const TASK_PRIORITIES = ["low", "medium", "high", "critical"] as const;
 export type TaskPriority = (typeof TASK_PRIORITIES)[number];
 
-// ── Adversary gate tags ─────────────────────────────────────
-
-export const ADVERSARY_PENDING_TAG = "adversary:pending";
-export const ADVERSARY_PASS_TAG = "adversary:pass";
-
 // ── Terminal states ─────────────────────────────────────────
 
 /**
@@ -43,34 +38,73 @@ export const TERMINAL_STATES: ReadonlySet<TaskStatus> = new Set(["done"]);
 export interface TaskSnapshot {
   id: string;
   status: TaskStatus;
-  priority: TaskPriority;
-  tags: string[];
-  updatedAt: string; // ISO-8601
+  /** Optimistic concurrency version counter. */
+  version: number;
+  /** ISO-8601 timestamp of last update. */
+  updatedAt: string;
 }
 
 // ── Gate event types ────────────────────────────────────────
 
+/**
+ * Actions the adversary agent can take on a task.
+ *
+ * - challenge:        adversary challenges the task quality
+ * - reject:           adversary rejects the deliverable
+ * - request_changes:  adversary requests specific changes
+ * - block:            adversary blocks the task from progressing
+ */
 export type AdversaryGateAction =
-  | "queue_pending"   // autopilot adds adversary:pending tag
-  | "verdict_pass"    // adversary marks pass, removes pending
-  | "verdict_fail";   // adversary moves task back to in_progress
+  | "challenge"
+  | "reject"
+  | "request_changes"
+  | "block";
 
 export interface AdversaryGateEvent {
-  action: AdversaryGateAction;
+  /** Unique event identifier for idempotency. */
+  eventId: string;
+  /** The task this event targets. */
   taskId: string;
-  /** ISO-8601 timestamp when the event was originally produced */
-  producedAt: string;
-  /** Optional dedup key; defaults to `${action}:${taskId}:${producedAt}` */
-  idempotencyKey?: string;
+  /** The adversary action to apply. */
+  action: AdversaryGateAction;
+  /** ISO-8601 timestamp when the event was originally created. */
+  createdAt: string;
+  /** Optional arbitrary payload. */
+  payload?: Record<string, unknown>;
 }
 
-// ── Guard result ────────────────────────────────────────────
+// ── Event processing result ─────────────────────────────────
 
-export type GuardVerdict = "accept" | "reject_terminal" | "reject_duplicate";
+export interface EventProcessingResult {
+  /** Whether the event was applied to the task. */
+  applied: boolean;
+  /** Human-readable reason when suppressed. */
+  reason?: string;
+  /** The event ID that was processed. */
+  eventId: string;
+  /** The task ID targeted by the event. */
+  taskId: string;
+}
 
-export interface GuardResult {
-  verdict: GuardVerdict;
-  reason: string;
-  event: AdversaryGateEvent;
-  taskSnapshot: TaskSnapshot;
+// ── Store interfaces ────────────────────────────────────────
+
+/**
+ * Abstraction over task persistence. In tests, backed by an in-memory
+ * Map. In production, backed by Postgres via the office backend.
+ */
+export interface TaskStore {
+  getTask(taskId: string): Promise<TaskSnapshot | null>;
+  updateTask(
+    taskId: string,
+    update: Partial<Pick<TaskSnapshot, "status" | "version">>
+  ): Promise<TaskSnapshot | null>;
+}
+
+/**
+ * Abstraction over the processed-event ledger for idempotency.
+ * Tracks which eventIds have already been handled.
+ */
+export interface EventLedger {
+  hasProcessed(eventId: string): Promise<boolean>;
+  markProcessed(eventId: string): Promise<void>;
 }

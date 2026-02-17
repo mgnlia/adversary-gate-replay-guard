@@ -1,7 +1,8 @@
 {
-  "name": "adversary-gate-replay-guard",
+  "name": "@ai-office/adversary-gate-replay-guard",
   "version": "1.0.0",
   "type": "module",
+  "main": "src/index.ts",
   "scripts": {
     "test": "bun test",
     "typecheck": "tsc --noEmit"

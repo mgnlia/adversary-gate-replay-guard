@@ -1,4 +1,4 @@
-import type { TaskSnapshot, TaskStore, EventLedger, TaskStatus } from "./types.js";
+import type { TaskSnapshot, TaskStore, EventLedger } from "./types.js";
 
 /**
  * In-memory task store — suitable for tests and single-process deployments.
@@ -18,7 +18,7 @@ export class InMemoryTaskStore implements TaskStore {
 
   async updateTask(
     taskId: string,
-    update: Partial<Pick<TaskSnapshot, "status" | "version">>
+    update: Partial<Pick<TaskSnapshot, "status" | "version">>,
   ): Promise<TaskSnapshot | null> {
     const existing = this.tasks.get(taskId);
     if (!existing) return null;
@@ -33,7 +33,7 @@ export class InMemoryTaskStore implements TaskStore {
     return { ...updated };
   }
 
-  /** Expose snapshot for assertions. */
+  /** Expose snapshot for assertions in tests. */
   peek(taskId: string): TaskSnapshot | undefined {
     const t = this.tasks.get(taskId);
     return t ? { ...t } : undefined;
@@ -42,7 +42,7 @@ export class InMemoryTaskStore implements TaskStore {
 
 /**
  * In-memory event ledger — tracks which event IDs have been processed.
- * Uses a Set with optional TTL-based eviction for long-running processes.
+ * Uses a Map with LRU-style eviction for long-running processes.
  */
 export class InMemoryEventLedger implements EventLedger {
   private processed = new Map<string, number>(); // eventId → timestamp
@@ -59,7 +59,7 @@ export class InMemoryEventLedger implements EventLedger {
   async markProcessed(eventId: string): Promise<void> {
     // Evict oldest entries if we're at capacity.
     if (this.processed.size >= this.maxEntries) {
-      const cutoff = this.maxEntries * 0.1; // evict 10%
+      const cutoff = Math.floor(this.maxEntries * 0.1); // evict 10%
       let removed = 0;
       for (const [key] of this.processed) {
         if (removed >= cutoff) break;

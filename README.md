@@ -69,15 +69,15 @@ if (!result.applied) {
 
 To integrate with the existing `packages/backend` event processing:
 
-1. Instantiate `AdversaryGateGuard` with a Postgres-backed `TaskStore` (wrapping the existing `repository/tasks.ts`)
+1. Instantiate `AdversaryGateGuard` with a Postgres-backed `TaskStore` (wrapping the existing task repository)
 2. Replace direct adversary event handling with `guard.processEvent(event)`
 3. The guard will automatically suppress stale replays and duplicates
 
 ## Running Tests
 
 ```bash
-npm install
-npm test
+bun install
+bun test
 ```
 
 ## Test Coverage

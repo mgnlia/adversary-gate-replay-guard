@@ -3,6 +3,7 @@ import type {
   EventLedger,
   EventProcessingResult,
   TaskStore,
+  TaskStatus,
 } from "./types.js";
 import { TERMINAL_STATES } from "./types.js";
 
@@ -25,7 +26,7 @@ export interface GuardConfig {
  * It enforces two invariants:
  *
  * 1. **Terminal-state transition guard**: If a task is in a terminal state
- *    (done, canceled), adversary gate events targeting it are suppressed.
+ *    (done), adversary gate events targeting it are suppressed.
  *
  * 2. **Consumer idempotency guard**: If the same event (by eventId) has
  *    already been processed, subsequent deliveries are no-ops.
@@ -38,7 +39,7 @@ export class AdversaryGateGuard {
   constructor(
     taskStore: TaskStore,
     eventLedger: EventLedger,
-    config?: GuardConfig
+    config?: GuardConfig,
   ) {
     this.taskStore = taskStore;
     this.eventLedger = eventLedger;
@@ -54,7 +55,7 @@ export class AdversaryGateGuard {
    * applied or suppressed (and why).
    */
   async processEvent(
-    event: AdversaryGateEvent
+    event: AdversaryGateEvent,
   ): Promise<EventProcessingResult> {
     const { eventId, taskId } = event;
 
@@ -69,7 +70,7 @@ export class AdversaryGateGuard {
       };
       if (this.config.logSuppressed) {
         console.log(
-          `[AdversaryGateGuard] SUPPRESSED (idempotency): ${result.reason}`
+          `[AdversaryGateGuard] SUPPRESSED (idempotency): ${result.reason}`,
         );
       }
       return result;
@@ -86,7 +87,7 @@ export class AdversaryGateGuard {
       };
       if (this.config.logSuppressed) {
         console.log(
-          `[AdversaryGateGuard] SUPPRESSED (not found): ${result.reason}`
+          `[AdversaryGateGuard] SUPPRESSED (not found): ${result.reason}`,
         );
       }
       // Still mark as processed to prevent retries on a deleted task.
@@ -103,7 +104,7 @@ export class AdversaryGateGuard {
       };
       if (this.config.logSuppressed) {
         console.log(
-          `[AdversaryGateGuard] SUPPRESSED (terminal state): ${result.reason}`
+          `[AdversaryGateGuard] SUPPRESSED (terminal state): ${result.reason}`,
         );
       }
       // Mark as processed so replays of this exact event are also caught
@@ -143,7 +144,7 @@ export class AdversaryGateGuard {
    */
   private async applyAdversaryAction(
     event: AdversaryGateEvent,
-    expectedVersion: number
+    expectedVersion: number,
   ): Promise<boolean> {
     const targetStatus = this.resolveTargetStatus(event.action);
 
@@ -170,8 +171,8 @@ export class AdversaryGateGuard {
    * Map adversary gate actions to the task status they would impose.
    */
   private resolveTargetStatus(
-    action: AdversaryGateEvent["action"]
-  ): "review" | "needs_clarification" {
+    action: AdversaryGateEvent["action"],
+  ): TaskStatus {
     switch (action) {
       case "challenge":
       case "reject":

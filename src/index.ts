@@ -2,10 +2,10 @@
  * @ai-office/adversary-gate-replay-guard
  *
  * Reliability module that suppresses stale adversary gate event replays
- * after a task has advanced to a terminal state (done/canceled).
+ * after a task has advanced to a terminal state (done).
  *
  * Two guards are enforced:
- * 1. Terminal-state transition guard — events targeting done/canceled tasks are no-ops.
+ * 1. Terminal-state transition guard — events targeting done tasks are no-ops.
  * 2. Consumer idempotency guard — duplicate event deliveries (same eventId) are no-ops.
  */
 
@@ -18,6 +18,7 @@ export type {
   TaskStatus,
   TaskSnapshot,
   AdversaryGateEvent,
+  AdversaryGateAction,
   EventProcessingResult,
   TaskStore,
   EventLedger,
