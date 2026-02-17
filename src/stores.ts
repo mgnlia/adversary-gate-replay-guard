@@ -7,7 +7,7 @@ import type { TaskSnapshot, TaskStore, EventLedger } from "./types.js";
 export class InMemoryTaskStore implements TaskStore {
   private tasks = new Map<string, TaskSnapshot>();
 
-  /** Seed a task into the store. */
+  /** Seed a task into the store (test helper). */
   seed(task: TaskSnapshot): void {
     this.tasks.set(task.id, { ...task });
   }
@@ -33,7 +33,7 @@ export class InMemoryTaskStore implements TaskStore {
     return { ...updated };
   }
 
-  /** Expose snapshot for assertions in tests. */
+  /** Expose snapshot for assertions (test helper). */
   peek(taskId: string): TaskSnapshot | undefined {
     const t = this.tasks.get(taskId);
     return t ? { ...t } : undefined;
@@ -59,7 +59,7 @@ export class InMemoryEventLedger implements EventLedger {
   async markProcessed(eventId: string): Promise<void> {
     // Evict oldest entries if we're at capacity.
     if (this.processed.size >= this.maxEntries) {
-      const cutoff = Math.floor(this.maxEntries * 0.1); // evict 10%
+      const cutoff = Math.ceil(this.maxEntries * 0.1); // evict 10%
       let removed = 0;
       for (const [key] of this.processed) {
         if (removed >= cutoff) break;

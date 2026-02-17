@@ -32,11 +32,11 @@ Event arrives → Already processed? → SUPPRESS (no-op)
 
 ```
 src/
-├── types.ts       # Core types: TaskSnapshot, AdversaryGateEvent, interfaces
+├── types.ts       # Core types: TaskSnapshot, AdversaryGateEvent, store interfaces
 ├── guard.ts       # AdversaryGateGuard — the main reliability layer
 ├── stores.ts      # In-memory implementations of TaskStore and EventLedger
 ├── index.ts       # Public API exports
-└── guard.test.ts  # Comprehensive regression tests
+└── guard.test.ts  # Comprehensive regression tests (bun:test)
 ```
 
 ## Usage
@@ -88,4 +88,5 @@ bun test
 - ✅ Race condition: rapid sequence of events with interleaved state changes
 - ✅ Multiple concurrent replays of the same stale event
 - ✅ Non-existent task handling
+- ✅ Action-to-status mapping verification
 - ✅ Ledger eviction behavior

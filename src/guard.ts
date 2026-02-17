@@ -68,11 +68,9 @@ export class AdversaryGateGuard {
         eventId,
         taskId,
       };
-      if (this.config.logSuppressed) {
-        console.log(
-          `[AdversaryGateGuard] SUPPRESSED (idempotency): ${result.reason}`,
-        );
-      }
+      this.logIfEnabled(
+        `SUPPRESSED (idempotency): ${result.reason}`,
+      );
       return result;
     }
 
@@ -85,11 +83,7 @@ export class AdversaryGateGuard {
         eventId,
         taskId,
       };
-      if (this.config.logSuppressed) {
-        console.log(
-          `[AdversaryGateGuard] SUPPRESSED (not found): ${result.reason}`,
-        );
-      }
+      this.logIfEnabled(`SUPPRESSED (not found): ${result.reason}`);
       // Still mark as processed to prevent retries on a deleted task.
       await this.eventLedger.markProcessed(eventId);
       return result;
@@ -102,21 +96,16 @@ export class AdversaryGateGuard {
         eventId,
         taskId,
       };
-      if (this.config.logSuppressed) {
-        console.log(
-          `[AdversaryGateGuard] SUPPRESSED (terminal state): ${result.reason}`,
-        );
-      }
+      this.logIfEnabled(
+        `SUPPRESSED (terminal state): ${result.reason}`,
+      );
       // Mark as processed so replays of this exact event are also caught
-      // by the idempotency guard.
+      // by the idempotency guard on subsequent deliveries.
       await this.eventLedger.markProcessed(eventId);
       return result;
     }
 
     // ── Apply the event ────────────────────────────────────
-    // In the real system this would dispatch to the adversary agent's
-    // handler. Here we model the state mutation that an adversary gate
-    // event would cause (e.g., moving the task back to review/needs_clarification).
     const applied = await this.applyAdversaryAction(event, task.version);
 
     // Mark as processed regardless of apply outcome.
@@ -182,6 +171,12 @@ export class AdversaryGateGuard {
         return "needs_clarification";
       default:
         return "review";
+    }
+  }
+
+  private logIfEnabled(message: string): void {
+    if (this.config.logSuppressed) {
+      console.log(`[AdversaryGateGuard] ${message}`);
     }
   }
 }
