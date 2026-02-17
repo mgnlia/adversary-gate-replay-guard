@@ -1,0 +1,17 @@
+--- a/packages/backend/src/db/repository/tasks.ts
++++ b/packages/backend/src/db/repository/tasks.ts
+@@ -3,6 +3,8 @@ const ADVERSARY_PASS_TAG = "adversary:pass";
+ const ADVERSARY_PENDING_TAG = "adversary:pending";
++const ADVERSARY_GATE_TAGS = [ADVERSARY_PASS_TAG, ADVERSARY_PENDING_TAG];
++const TERMINAL_TASK_STATUSES: Set<string> = new Set(["done", "backlog"]);
+ 
+ // Inside updateTask function, after merging tags but before writing to DB:
+ // Add terminal-state adversary tag cleanup
++    // --- Terminal-state adversary gate cleanup ---
++    if (TERMINAL_TASK_STATUSES.has(effectiveStatus)) {
++      mergedTags = mergedTags.filter(
++        (tag) => !ADVERSARY_GATE_TAGS.some(
++          (gateTag) => tag.trim().toLowerCase() === gateTag.toLowerCase()
++        )
++      );
++    }
